@@ -152,10 +152,6 @@
         "vue/component-name-in-template-casing": ["warn", "kebab-case", {
             "registeredComponentsOnly": true
         }],
-        "vue/html-comment-content-newline": ["warn", {
-            "singleline": "never",
-            "multiline": "always"
-        }],
         "vue/html-comment-content-spacing": ["warn", "always"],
         "vue/html-comment-indent": ["warn", 4],
         "vue/no-duplicate-attr-inheritance": "warn",
@@ -173,9 +169,50 @@
         }],
         "vue/no-useless-v-bind": "warn",
         "vue/padding-line-between-blocks": "warn",
-        "vue/require-name-property": "warn"
+        "vue/require-name-property": "warn",
 
         /* Extension Rules */
-
+        "vue/arrow-spacing": "error",
+        "vue/block-spacing": "error",
+        "vue/brace-style": ["error", "1tbs", {
+            "allowSingleLine": true
+        }],
+        "vue/camelcase": "error",
+        "vue/comma-dangle": ["error", "always-multiline"],
+        "vue/eqeqeq": ["error", "always"],
+        "vue/func-call-spacing": ["error", "never"],
+        "vue/key-spacing": "error",
+        "vue/keyword-spacing": "error",
+        "vue/max-len": ["error", {
+            "tabWidth": 4,
+            "ignoreComments": true,
+            "ignoreUrls": true,
+            "ignoreStrings": true,
+            "ignoreTemplateLiterals": true,
+            "ignoreRegExpLiterals": true,
+            "ignoreHTMLAttributeValues": true,
+            "ignoreHTMLTextContents": true
+        }],
+        "vue/no-empty-pattern": "error",
+        "vue/no-irregular-whitespace": "error",
+        "vue/no-useless-concat": "error",
+        "vue/object-curly-newline": ["error", {
+            "minProperties": 2,
+            "multiline": true
+        }],
+        "vue/object-curly-spacing": ["error", "always"],
+        "vue/object-property-newline": ["error", {
+            "allowAllPropertiesOnSameLine": false
+        }],
+        "vue/operator-linebreak": ["error", "after", {
+            "overrides": {
+                "?": "before",
+                ":": "before"
+            }
+        }],
+        "vue/prefer-template": "error",
+        "vue/space-in-parens": "error",
+        "vue/space-infix-ops": "error",
+        "vue/space-unary-ops": "error"
     }
 }
