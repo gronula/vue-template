@@ -1,0 +1,42 @@
+/* Custom variables */
+
+:root {
+    /* 1 */
+}
+
+/* Viewports */
+
+$breakpoints: (
+    mobile: 320px,
+    mobile-md: 375px,
+    tablet-sm: 768px,
+    tablet: 1024px,
+    desktop-sm: 1280px,
+    desktop: 1440px,
+    desktop-md: 1600px,
+    desktop-lg: 1920px,
+    desktop-xlg: 2560px,
+);
+
+/* Colors */
+
+$colors: (
+    black: #000000,
+    white: #ffffff,
+    blue: #0041cc,
+    green: #00cc00,
+    red: #cc0000,
+    border-color: #dddddd,
+    border-color-hover: #999999,
+    bg-hover: #f1f2f3,
+    select-bg: rgba(255, 0, 0, 0.15),
+    select-bg-hover: rgba(255, 0, 0, 0.1),
+);
+
+/* Transition */
+
+$trs: all 0.4s cubic-bezier(0.33, 0, 0, 1);
+
+/* Box shadow */
+
+$shadow: 0 0 64px 1px rgba(0, 0, 0, 0.15);

@@ -10,7 +10,15 @@ module.exports = {
             }),
             new StyleLintPlugin({
                 files: ['**/*.{vue,html,css,less,sass,scss}'],
+                emitWarnings: true,
             }),
         ],
+    },
+    css: {
+        loaderOptions: {
+            scss: {
+                additionalData: '@import "@/styles/main.scss";',
+            },
+        },
     },
 }

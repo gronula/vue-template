@@ -1,0 +1,6 @@
+@mixin font($weight) {
+    @if $weight == "r" {
+        font-weight: 400;
+        font-family: Font, sans-serif;
+    }
+}
