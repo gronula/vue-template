@@ -33,18 +33,12 @@ export default class PromisesBus {
     resolve(what, ...args) {
         this.register(what)
 
-        this.resolves[what].apply(
-            this.promises[what],
-            Array.prototype.slice.call(args, 1),
-        )
+        this.resolves[what].apply(this.promises[what], args)
     }
 
     reject(what, ...args) {
         this.register(what)
 
-        this.rejects[what].apply(
-            this.promises[what],
-            Array.prototype.slice.call(args, 1),
-        )
+        this.rejects[what].apply(this.promises[what], args)
     }
 }

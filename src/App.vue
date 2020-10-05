@@ -147,8 +147,6 @@ export default {
         },
     },
     mounted() {
-        console.log(this.$bus)
-
         if (this.opened) {
             document.addEventListener('click', this.documentClickHandler)
         }
@@ -169,7 +167,7 @@ export default {
         },
         closeSelect() {
             this.opened = false
-            // console.log("close");
+
             this.items.forEach(item => this.$set(item, 'focused', false))
         },
         selectItem(item) {
