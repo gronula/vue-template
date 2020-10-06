@@ -8,81 +8,27 @@
             <span>{{ currentItem.initialText }}</span>
             <i class="fas fa-chevron-down"></i>
         </button>
+
         <transition name="fade">
             <div
                 v-if="opened"
                 class="select__wrapper"
                 @click.stop=""
             >
-                <div class="select__search">
-                    <label class="select__label">
-                        <i class="fas fa-search"></i>
-                        <input
-                            v-model.trim="search"
-                            class="select__input"
-                            type="text"
-                            placeholder="Search..."
-                        >
-                    </label>
-                    <button
-                        :disabled="!search"
-                        class="select__add-btn"
-                        type="button"
-                        @click="addItem"
-                    >
-                        <i class="fas fa-plus-circle"></i>
-                    </button>
-                </div>
-                <ul
+                <app-select-search
+                    :search.sync="search"
+                    @add="addItem"
+                />
+
+                <app-select-list
                     v-if="searchedItems.length"
-                    class="select__list"
-                >
-                    <li
-                        v-for="(item, i) in searchedItems"
-                        :key="i"
-                        :class="[
-                            'select__item',
-                            { selected: item.selected },
-                            { focused: item.focused },
-                        ]"
-                    >
-                        <input
-                            v-model.trim="item.text"
-                            ref="selectText"
-                            :disabled="item.disabled"
-                            :type="item.focused ? 'text' : 'button'"
-                            class="select__item-text"
-                            @click.stop.prevent="selectItem(item)"
-                        >
-                        <button
-                            :disabled="!item.text"
-                            class="select__item-btn select__item-btn--edit"
-                            type="button"
-                            @click="editItem($event, item)"
-                        >
-                            <i
-                                :class="[
-                                    'fas fa-xs',
-                                    item.focused ? 'fa-check' : 'fa-pen',
-                                ]"
-                            ></i>
-                        </button>
-                        <button
-                            class="select__item-btn select__item-btn--remove"
-                            type="button"
-                            @click="removeItem(item)"
-                        >
-                            <i
-                                :class="[
-                                    'fa-xs',
-                                    item.focused
-                                        ? 'fas fa-undo'
-                                        : 'far fa-times-circle',
-                                ]"
-                            ></i>
-                        </button>
-                    </li>
-                </ul>
+                    :items="searchedItems"
+                    @select="selectItem"
+                    @edit="editItem"
+                    @input="updateText"
+                    @remove="removeItem"
+                />
+
                 <p
                     v-else
                     class="select__empty-text"
@@ -95,11 +41,18 @@
 </template>
 
 <script>
+import AppSelectSearch from '@/components/Select/AppSelectSearch'
+import AppSelectList from '@/components/Select/AppSelectList'
+
 export default {
     name: 'AppSelect',
+    components: {
+        AppSelectSearch,
+        AppSelectList,
+    },
     data() {
         return {
-            opened: false,
+            opened: true,
             items: [
                 {
                     text: 'One',
@@ -127,21 +80,28 @@ export default {
     },
     computed: {
         currentItem() {
-            return this.items.reduce((acc, cur) => (cur.selected ? cur : acc), {
-                disabled: true,
-                initialText: 'Select item...',
-                value: null,
-            })
+            return this.items.reduce(
+                (acc, cur) => (cur.selected ? cur : acc),
+                {
+                    disabled: true,
+                    initialText: 'Select item...',
+                    value: null,
+                },
+            )
         },
         searchedItems() {
             return [...this.items].filter(item => item.text
                 .toLowerCase()
                 .includes(this.search.toLowerCase()))
         },
+        focusedItemIndex() {
+            return this.searchedItems.findIndex(item => item.focused)
+        },
     },
     mounted() {
         if (this.opened) {
             document.addEventListener('click', this.documentClickHandler)
+            document.addEventListener('keyup', this.documentKeyupHandler)
         }
     },
     methods: {
@@ -150,6 +110,7 @@ export default {
 
             if (this.opened) {
                 document.addEventListener('click', this.documentClickHandler)
+                document.addEventListener('keyup', this.documentKeyupHandler)
             } else {
                 this.closeSelect()
                 document.removeEventListener(
@@ -161,12 +122,15 @@ export default {
         closeSelect() {
             this.opened = false
 
-            this.items.forEach(item => this.$set(item, 'focused', false))
+            this.items.forEach(item => this.$set(item, 'editable', false))
+
+            document.removeEventListener('keyup', this.documentKeyupHandler)
         },
-        selectItem(item) {
-            if (item.focused) {
+        selectItem({ item }) {
+            if (item.editable) {
                 return
             }
+
             this.currentItem.selected = false
             this.$set(item, 'selected', true)
             this.closeSelect()
@@ -177,6 +141,43 @@ export default {
                 this.closeSelect()
             }
             document.removeEventListener('click', this.documentClickHandler)
+        },
+        documentKeyupHandler(e) {
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
+                return
+            }
+
+            let focusedIndex = 0
+
+            if (this.focusedItemIndex !== -1) {
+                if (e.key === 'ArrowUp') {
+                    focusedIndex = this.focusedItemIndex < 1
+                        ? this.searchedItems.length - 1
+                        : this.focusedItemIndex - 1
+                }
+
+                if (e.key === 'ArrowDown') {
+                    if (this.focusedItemIndex < this.searchedItems.length - 1) {
+                        focusedIndex = this.focusedItemIndex + 1
+                    }
+                }
+            }
+
+            this.setFocus(focusedIndex)
+        },
+        setFocus(index) {
+            this.items.forEach((item, i) => {
+                this.$set(item, 'focused', index === i)
+            })
+        },
+        setEditable(value, editable) {
+            this.items.forEach(item => {
+                this.$set(
+                    item,
+                    'editable',
+                    item.value === value ? editable : false,
+                )
+            })
         },
         addItem() {
             if (!this.search) {
@@ -191,44 +192,18 @@ export default {
 
             this.search = ''
         },
-        async editItem(e, { value, focused }) {
-            this.items.forEach(item => {
-                this.$set(
-                    item,
-                    'focused',
-                    item.value === value ? !item.focused : false,
-                )
-            })
+        editItem({ item: { value }, editable }) {
+            this.setEditable(value, editable)
+        },
+        updateText({ item, value, needUpdateInititalText = false }) {
+            item.text = value
 
-            await this.$nextTick()
-
-            const itemEl = e.target.closest('.select__item')
-
-            if (!itemEl) {
-                return
-            }
-
-            const textEl = itemEl.querySelector('.select__item-text')
-
-            if (!textEl) {
-                return
-            }
-
-            if (!focused) {
-                textEl.focus()
-            } else {
-                const item = this.items.find(el => el.value === value)
-
-                if (!item?.newText) {
-                    return
-                }
-
-                item.text = item.newText
-                item.newText = ''
+            if (needUpdateInititalText) {
+                item.initialText = value
             }
         },
-        removeItem({ value, focused }) {
-            if (focused) {
+        removeItem({ item: { value, editable } }) {
+            if (editable) {
                 const item = this.items.find(el => el.value === value)
 
                 if (!item) {
@@ -239,6 +214,8 @@ export default {
             } else {
                 this.items = this.items.filter(item => item.value !== value)
             }
+
+            this.setEditable(value, false)
         },
     },
 }
@@ -249,7 +226,7 @@ export default {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 14rem;
+    width: 100%;
     margin: 0.5rem;
 
     &__current {
@@ -305,161 +282,6 @@ export default {
             border-color: map-get($colors, border-color-hover);
             box-shadow: $shadow;
             pointer-events: all;
-        }
-    }
-
-    &__search {
-        display: flex;
-        width: 100%;
-        border-bottom: 1px solid map-get($colors, border-color-hover);
-    }
-
-    &__label {
-        position: relative;
-        display: flex;
-        flex-grow: 1;
-        align-items: center;
-
-        i {
-            position: absolute;
-            top: 50%;
-            left: 1rem;
-            transform: translateY(-50%);
-        }
-    }
-
-    &__input {
-        flex-grow: 1;
-        width: 0;
-        padding-top: 0.75rem;
-        padding-right: 1rem;
-        padding-bottom: 0.75rem;
-        padding-left: 3rem;
-        font-size: 1rem;
-        line-height: 1.5;
-        border: 0;
-    }
-
-    &__add-btn {
-        width: 3rem;
-        height: 3rem;
-        padding: 0;
-        background-color: transparent;
-        border: 0;
-        border-left: 1px solid map-get($colors, border-color-hover);
-        cursor: pointer;
-        transition: $trs;
-
-        &[disabled] {
-            pointer-events: none;
-        }
-
-        &:hover,
-        &:focus {
-            background-color: map-get($colors, bg-hover);
-        }
-    }
-
-    &__list {
-        max-height: calc(3.1rem * 5 + 1px * 2); // show 5 items
-        margin-top: 0;
-        margin-bottom: 0;
-        padding-left: 0;
-        overflow: auto;
-    }
-
-    &__item {
-        position: relative;
-        display: flex;
-        align-items: center;
-        list-style: none;
-        border-bottom: 1px solid map-get($colors, border-color-hover);
-
-        &:last-child {
-            border-bottom: 0;
-        }
-    }
-
-    &__item-text {
-        flex-grow: 1;
-        padding-top: 0.75rem;
-        padding-right: 3rem;
-        padding-bottom: 0.75rem;
-        padding-left: 1rem;
-        overflow: hidden;
-        font-size: 1rem;
-        line-height: 1.5;
-        white-space: nowrap;
-        text-align: left;
-        text-overflow: ellipsis;
-        background-color: transparent;
-        border: 0;
-        cursor: pointer;
-        transition: $trs;
-
-        &:hover,
-        &:focus {
-            background-color: map-get($colors, bg-hover);
-        }
-
-        .select__item.focused & {
-            cursor: initial;
-        }
-
-        .select__item.selected & {
-            background-color: map-get($colors, select-bg);
-
-            &:hover,
-            &:focus {
-                background-color: map-get($colors, select-bg-hover);
-            }
-        }
-    }
-
-    &__item-btn {
-        position: absolute;
-        top: 50%;
-        display: flex;
-        flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        width: 1.25rem;
-        height: 1.25rem;
-        padding: 0;
-        font-size: 1rem;
-        background-color: transparent;
-        border: 0;
-        transform: translateY(-50%);
-        cursor: pointer;
-        transition: $trs;
-
-        &--edit {
-            right: 1.5rem;
-
-            &:hover,
-            &:focus {
-                color: map-get($colors, blue);
-            }
-
-            .select__item.focused & {
-                &:hover,
-                &:focus {
-                    color: map-get($colors, green);
-                }
-            }
-        }
-
-        &--remove {
-            right: 0.25rem;
-
-            &:hover,
-            &:focus {
-                color: map-get($colors, red);
-            }
-        }
-
-        &[disabled] {
-            pointer-events: none;
         }
     }
 

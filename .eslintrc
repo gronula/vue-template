@@ -29,7 +29,7 @@
             "allowImplicit": true
         }],
         "class-methods-use-this": "error",
-        "complexity": ["warn", 5],
+        "complexity": ["warn", 10],
         "curly": ["error", "all"],
         "default-case": ["error", {
             "commentPattern": "^no\\sdefault"
@@ -57,7 +57,7 @@
         "no-labels": "error",
         "no-lone-blocks": "error",
         "no-magic-numbers": ["warn", {
-            "ignore": [1],
+            "ignore": [-1, 0, 1],
             "ignoreArrayIndexes": true,
             "ignoreDefaultValues": true
         }],

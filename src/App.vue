@@ -3,7 +3,7 @@
         id="app"
         class="app"
     >
-        <app-select />
+        <app-select class="select" />
     </div>
 </template>
 
@@ -22,7 +22,15 @@ export default {
 .app {
     display: flex;
     flex-direction: column;
-    max-width: 960px;
-    margin-top: 10rem;
+    align-items: center;
+    width: 100%;
+    min-height: 100vh;
+    padding: 1rem;
+
+    .select {
+        width: 24rem;
+        max-width: 100%;
+        margin-top: 10rem;
+    }
 }
 </style>
