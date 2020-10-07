@@ -1,9 +1,12 @@
 <template>
-    <div :class="['select', { opened: opened }]">
+    <div
+        ref="select"
+        :class="['select', { opened: opened }]"
+    >
         <button
             class="select__current"
             type="button"
-            @click.stop.prevent="toggleSelect"
+            @click.prevent="toggleSelect"
         >
             <span>{{ currentItem.initialText }}</span>
             <i class="fas fa-chevron-down"></i>
@@ -27,6 +30,7 @@
                     @edit="editItem"
                     @input="updateText"
                     @remove="removeItem"
+                    @revert="revertItem"
                 />
 
                 <p
@@ -50,32 +54,24 @@ export default {
         AppSelectSearch,
         AppSelectList,
     },
+    props: {
+        items: {
+            type: Array,
+            required: true,
+        },
+        opened: {
+            type: Boolean,
+            default: false,
+        },
+    },
     data() {
         return {
-            opened: true,
-            items: [
-                {
-                    text: 'One',
-                    initialText: 'One',
-                    value: 1,
-                },
-                {
-                    text: 'Two',
-                    initialText: 'Two',
-                    value: 2,
-                },
-                {
-                    text: 'Three',
-                    initialText: 'Three',
-                    value: 3,
-                },
-                {
-                    text: 'FourFour FourFourFour Four FourFour',
-                    initialText: 'FourFour FourFourFour Four FourFour',
-                    value: 4,
-                },
-            ],
             search: '',
+            controlKeys: [
+                'Escape',
+                'ArrowUp',
+                'ArrowDown',
+            ],
         }
     },
     computed: {
@@ -105,8 +101,10 @@ export default {
         }
     },
     methods: {
-        toggleSelect() {
-            this.opened = !this.opened
+        async toggleSelect() {
+            this.$emit('update:opened', !this.opened)
+
+            await this.$nextTick()
 
             if (this.opened) {
                 document.addEventListener('click', this.documentClickHandler)
@@ -119,8 +117,10 @@ export default {
                 )
             }
         },
-        closeSelect() {
-            this.opened = false
+        async closeSelect() {
+            this.$emit('update:opened', false)
+
+            await this.$nextTick()
 
             this.items.forEach(item => this.$set(item, 'editable', false))
 
@@ -136,14 +136,28 @@ export default {
             this.closeSelect()
             this.search = ''
         },
-        documentClickHandler() {
+        documentClickHandler(e) {
+            const { target } = e
+            const closestSelect = target.closest('.select')
+
+            if (closestSelect === this.$refs.select) {
+                return
+            }
+
             if (this.opened) {
                 this.closeSelect()
             }
+
             document.removeEventListener('click', this.documentClickHandler)
         },
         documentKeyupHandler(e) {
-            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
+            if (!this.controlKeys.includes(e.key)) {
+                return
+            }
+
+            if (e.key === 'Escape') {
+                this.closeSelect()
+
                 return
             }
 
@@ -166,7 +180,7 @@ export default {
             this.setFocus(focusedIndex)
         },
         setFocus(index) {
-            this.items.forEach((item, i) => {
+            this.searchedItems.forEach((item, i) => {
                 this.$set(item, 'focused', index === i)
             })
         },
@@ -184,11 +198,15 @@ export default {
                 return
             }
 
-            this.items.push({
-                initialText: this.search,
-                text: this.search,
-                value: this.items.length + 1,
-            })
+            this.$emit('update:items', [
+                ...this.items,
+                {
+                    initialText: this.search,
+                    text: this.search,
+                    value: Date.now(),
+                },
+
+            ])
 
             this.search = ''
         },
@@ -202,18 +220,30 @@ export default {
                 item.initialText = value
             }
         },
-        removeItem({ item: { value, editable } }) {
-            if (editable) {
-                const item = this.items.find(el => el.value === value)
+        async removeItem({ item: { value } }) {
+            console.log('remove')
 
-                if (!item) {
-                    return
-                }
+            this.$emit('update:items', [
+                ...this.items
+                    .filter(item => item.value !== value),
+            ])
 
-                item.text = item.initialText
-            } else {
-                this.items = this.items.filter(item => item.value !== value)
+            await this.$nextTick()
+
+            this.setEditable(value, false)
+        },
+        async revertItem({ item: { value } }) {
+            console.log('revert')
+
+            const item = this.items.find(el => el.value === value)
+
+            if (!item) {
+                return
             }
+
+            item.text = item.initialText
+
+            await this.$nextTick()
 
             this.setEditable(value, false)
         },
@@ -264,6 +294,11 @@ export default {
             border-bottom-right-radius: 0;
             border-bottom-left-radius: 0;
         }
+
+        &:focus,
+        .select.opened & {
+            z-index: 3;
+        }
     }
 
     &__wrapper {
@@ -271,14 +306,17 @@ export default {
         top: calc(100% - 1px);
         right: 0;
         left: 0;
+        z-index: 0;
         overflow: hidden;
         background-color: map-get($colors, white);
         border: 1px solid map-get($colors, border-color);
         border-bottom-right-radius: 0.5rem;
         border-bottom-left-radius: 0.5rem;
+        transition: $trs;
         pointer-events: none;
 
         .select.opened & {
+            z-index: 2;
             border-color: map-get($colors, border-color-hover);
             box-shadow: $shadow;
             pointer-events: all;

@@ -15,7 +15,7 @@
             :disabled="disabled"
             class="select-item__text"
             type="text"
-            @click.stop.prevent="$emit('select', { item })"
+            @keyup.enter.stop="editItem"
         >
         <button
             v-else
@@ -32,7 +32,8 @@
             :disabled="!text"
             class="select-item__btn select-item__btn--edit"
             type="button"
-            @click="editItem"
+            @mouseup="editItem"
+            @keyup.enter.stop="editItem"
         >
             <i
                 :class="[
@@ -45,7 +46,7 @@
             :disabled="editable && text === initialText"
             class="select-item__btn select-item__btn--remove"
             type="button"
-            @click="$emit('remove', { item })"
+            @click="$emit(`${editable ? 'revert' : 'remove'}`, { item })"
         >
             <i
                 :class="[
@@ -97,12 +98,22 @@ export default {
         },
     },
     watch: {
+        editable(value) {
+            console.log('watch editable', this.text, value)
+
+            if (!value && this.text !== this.initialText) {
+                this.$emit('revert', { item: this.item })
+            }
+        },
         focused(value) {
+            console.log('watch focused', this.text, value)
+
             if (value) {
                 this.$refs.selectText.focus()
             }
         },
     },
+    mounted() {},
     methods: {
         async editItem() {
             this.$emit('edit', {
