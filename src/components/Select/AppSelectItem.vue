@@ -15,6 +15,8 @@
             :disabled="disabled"
             class="select-item__text"
             type="text"
+            @focus="$emit('focus', { item })"
+            @blur="$emit('blur', { item })"
             @keyup.enter.stop="editItem"
         >
         <button
@@ -23,6 +25,8 @@
             :disabled="disabled"
             class="select-item__text"
             type="button"
+            @focus="$emit('focus', { item })"
+            @blur="$emit('blur', { item })"
             @click.stop.prevent="$emit('select', { item })"
         >
             <span>{{ text }}</span>
@@ -38,7 +42,10 @@
             <i
                 :class="[
                     'fas fa-xs',
-                    editable ? 'fa-check' : 'fa-pen',
+                    {
+                        'fa-check': editable,
+                        'fa-pen': !editable,
+                    },
                 ]"
             ></i>
         </button>
@@ -51,9 +58,10 @@
             <i
                 :class="[
                     'fa-xs',
-                    editable
-                        ? 'fas fa-undo'
-                        : 'far fa-times-circle',
+                    {
+                        'fas fa-undo': editable,
+                        'far fa-times-circle': !editable,
+                    },
                 ]"
             ></i>
         </button>
@@ -98,22 +106,12 @@ export default {
         },
     },
     watch: {
-        editable(value) {
-            console.log('watch editable', this.text, value)
-
-            if (!value && this.text !== this.initialText) {
-                this.$emit('revert', { item: this.item })
-            }
-        },
         focused(value) {
-            console.log('watch focused', this.text, value)
-
             if (value) {
                 this.$refs.selectText.focus()
             }
         },
     },
-    mounted() {},
     methods: {
         async editItem() {
             this.$emit('edit', {

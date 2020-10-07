@@ -3,15 +3,25 @@
         <label class="select-search__label">
             <i class="fas fa-search"></i>
             <input
-                v-model.trim="searchQuery"
+                v-model.trim="query"
                 class="select-search__input"
                 type="text"
                 placeholder="Search..."
             >
+
+            <button
+                v-if="query"
+                class="select-search__clear-btn"
+                type="button"
+                @click.prevent="query = ''"
+            >
+                <i class="fas fa-times"></i>
+            </button>
         </label>
 
         <button
-            :disabled="!search"
+            v-if="additionAvailable"
+            :disabled="addBtnDisabled || !query"
             class="select-search__add-btn"
             type="button"
             @click="$emit('add')"
@@ -24,17 +34,28 @@
 <script>
 export default {
     name: 'AppSelectSearch',
+    inject: {
+        additionAvailable: {
+            default: false,
+        },
+    },
     props: {
-        search: String,
+        search: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     computed: {
-        searchQuery: {
+        query: {
             get() {
-                return this.search
+                return this.search.query
             },
             set(value) {
-                this.$emit('update:search', value)
+                this.$emit('input', value)
             },
+        },
+        addBtnDisabled() {
+            return this.search.addBtnDisabled
         },
     },
 }
@@ -42,6 +63,7 @@ export default {
 
 <style lang="scss" scoped>
 .select-search {
+    position: relative;
     display: flex;
     width: 100%;
     border-bottom: 1px solid map-get($colors, border-color-hover);
@@ -52,7 +74,7 @@ export default {
         flex-grow: 1;
         align-items: center;
 
-        i {
+        & > i {
             position: absolute;
             top: 50%;
             left: 1rem;
@@ -64,12 +86,31 @@ export default {
         flex-grow: 1;
         width: 0;
         padding-top: 0.75rem;
-        padding-right: 1rem;
+        padding-right: 3rem;
         padding-bottom: 0.75rem;
         padding-left: 3rem;
         font-size: 1rem;
         line-height: 1.5;
         border: 0;
+    }
+
+    &__clear-btn {
+        position: absolute;
+        top: 50%;
+        right: 1rem;
+        width: 1rem;
+        height: 1rem;
+        padding: 0;
+        background-color: transparent;
+        border: 0;
+        transform: translateY(-50%);
+        cursor: pointer;
+        transition: $trs;
+
+        &:hover,
+        &:focus {
+            color: map-get($colors, red);
+        }
     }
 
     &__add-btn {

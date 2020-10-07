@@ -19,13 +19,17 @@
                 @click.stop=""
             >
                 <app-select-search
-                    :search.sync="search"
+                    v-if="searchAvailable"
+                    :search="search"
                     @add="addItem"
+                    @input="updateSearch"
                 />
 
                 <app-select-list
                     v-if="searchedItems.length"
                     :items="searchedItems"
+                    @focus="focusItem"
+                    @blur="blurItem"
                     @select="selectItem"
                     @edit="editItem"
                     @input="updateText"
@@ -54,6 +58,11 @@ export default {
         AppSelectSearch,
         AppSelectList,
     },
+    provide() {
+        return {
+            additionAvailable: this.additionAvailable,
+        }
+    },
     props: {
         items: {
             type: Array,
@@ -63,10 +72,21 @@ export default {
             type: Boolean,
             default: false,
         },
+        searchAvailable: {
+            type: Boolean,
+            default: false,
+        },
+        additionAvailable: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
-            search: '',
+            search: {
+                query: '',
+                addBtnDisabled: false,
+            },
             controlKeys: [
                 'Escape',
                 'ArrowUp',
@@ -76,19 +96,16 @@ export default {
     },
     computed: {
         currentItem() {
-            return this.items.reduce(
-                (acc, cur) => (cur.selected ? cur : acc),
-                {
-                    disabled: true,
-                    initialText: 'Select item...',
-                    value: null,
-                },
-            )
+            return this.items.reduce((acc, cur) => (cur.selected ? cur : acc), {
+                disabled: true,
+                initialText: 'Select item...',
+                value: null,
+            })
         },
         searchedItems() {
             return [...this.items].filter(item => item.text
                 .toLowerCase()
-                .includes(this.search.toLowerCase()))
+                .includes(this.search.query.toLowerCase()))
         },
         focusedItemIndex() {
             return this.searchedItems.findIndex(item => item.focused)
@@ -100,41 +117,29 @@ export default {
             document.addEventListener('keyup', this.documentKeyupHandler)
         }
     },
+    beforeDestroy() {
+        document.addEventListener('click', this.documentClickHandler)
+        document.addEventListener('keyup', this.documentKeyupHandler)
+    },
     methods: {
-        async toggleSelect() {
-            this.$emit('update:opened', !this.opened)
-
-            await this.$nextTick()
-
+        toggleSelect() {
             if (this.opened) {
-                document.addEventListener('click', this.documentClickHandler)
-                document.addEventListener('keyup', this.documentKeyupHandler)
-            } else {
                 this.closeSelect()
-                document.removeEventListener(
-                    'click',
-                    this.documentClickHandler,
-                )
+            } else {
+                this.openSelect()
             }
         },
-        async closeSelect() {
+        openSelect() {
+            this.$emit('update:opened', true)
+
+            document.addEventListener('click', this.documentClickHandler)
+            document.addEventListener('keyup', this.documentKeyupHandler)
+        },
+        closeSelect() {
             this.$emit('update:opened', false)
 
-            await this.$nextTick()
-
-            this.items.forEach(item => this.$set(item, 'editable', false))
-
+            document.removeEventListener('click', this.documentClickHandler)
             document.removeEventListener('keyup', this.documentKeyupHandler)
-        },
-        selectItem({ item }) {
-            if (item.editable) {
-                return
-            }
-
-            this.currentItem.selected = false
-            this.$set(item, 'selected', true)
-            this.closeSelect()
-            this.search = ''
         },
         documentClickHandler(e) {
             const { target } = e
@@ -147,8 +152,6 @@ export default {
             if (this.opened) {
                 this.closeSelect()
             }
-
-            document.removeEventListener('click', this.documentClickHandler)
         },
         documentKeyupHandler(e) {
             if (!this.controlKeys.includes(e.key)) {
@@ -193,24 +196,58 @@ export default {
                 )
             })
         },
+        focusItem({ item: { value } }) {
+            const index = this.searchedItems
+                .findIndex(item => item.value === value)
+
+            if (index > -1) {
+                this.setFocus(index)
+            }
+        },
+        blurItem({ item }) {
+            item.focused = false
+        },
+        selectItem({ item }) {
+            if (item.editable) {
+                return
+            }
+
+            this.currentItem.selected = false
+            this.$set(item, 'selected', true)
+            this.closeSelect()
+            this.search.query = ''
+        },
+        updateSearch(query) {
+            this.search.query = query
+
+            const sameItem = this.items
+                .find(item => item.text === this.search.query)
+
+            this.search.addBtnDisabled = !!sameItem
+        },
         addItem() {
-            if (!this.search) {
+            if (!this.search.query) {
                 return
             }
 
             this.$emit('update:items', [
                 ...this.items,
                 {
-                    initialText: this.search,
-                    text: this.search,
+                    initialText: this.search.query,
+                    text: this.search.query,
                     value: Date.now(),
                 },
-
             ])
 
-            this.search = ''
+            this.search.query = ''
         },
         editItem({ item: { value }, editable }) {
+            const editedItem = this.items.find(item => item.editable)
+
+            if (editedItem && editedItem.value !== value) {
+                this.revertItem({ item: editedItem })
+            }
+
             this.setEditable(value, editable)
         },
         updateText({ item, value, needUpdateInititalText = false }) {
@@ -220,32 +257,15 @@ export default {
                 item.initialText = value
             }
         },
-        async removeItem({ item: { value } }) {
-            console.log('remove')
-
-            this.$emit('update:items', [
-                ...this.items
-                    .filter(item => item.value !== value),
-            ])
-
-            await this.$nextTick()
-
-            this.setEditable(value, false)
+        removeItem({ item: { value } }) {
+            this.$emit(
+                'update:items',
+                [...this.items.filter(item => item.value !== value)],
+            )
         },
-        async revertItem({ item: { value } }) {
-            console.log('revert')
-
-            const item = this.items.find(el => el.value === value)
-
-            if (!item) {
-                return
-            }
-
+        revertItem({ item }) {
             item.text = item.initialText
-
-            await this.$nextTick()
-
-            this.setEditable(value, false)
+            item.editable = false
         },
     },
 }
